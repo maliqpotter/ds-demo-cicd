@@ -18,7 +18,9 @@ def get_db():
 @app.get("/", response_class=HTMLResponse)
 def read_notes(request: Request, db: Session = Depends(get_db)):
     notes = db.query(Note).all()
-    return templates.TemplateResponse("index.html", {"request": request, "notes": notes})
+    return templates.TemplateResponse(
+        request=request, name="index.html", context={"notes": notes}
+    )
 
 @app.post("/add")
 def add_note(title: str = Form(...), content: str = Form(...), db: Session = Depends(get_db)):
