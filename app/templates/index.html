@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,7 +49,8 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .note-form input, .note-form textarea {
+        .note-form input,
+        .note-form textarea {
             width: 100%;
             padding: 0.75rem;
             margin-bottom: 1rem;
@@ -122,10 +124,11 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h1>My Notes</h1>
-        
+        <h1>My Notes V2</h1>
+
         <form class="note-form" action="/add" method="post">
             <input type="text" name="title" placeholder="Note Title" required>
             <textarea name="content" placeholder="Write your note here..." rows="4" required></textarea>
@@ -143,4 +146,5 @@
         </div>
     </div>
 </body>
+
 </html>
