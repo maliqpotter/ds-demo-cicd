@@ -108,14 +108,20 @@
             line-height: 1.5;
         }
 
-        .delete-btn {
+        .delete-form {
             position: absolute;
             top: 1rem;
             right: 1rem;
+            margin: 0;
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
             color: #ef4444;
-            text-decoration: none;
             font-size: 0.875rem;
             opacity: 0.6;
+            cursor: pointer;
             transition: opacity 0.2s;
         }
 
@@ -138,7 +144,9 @@
         <div class="notes-list">
             {% for note in notes %}
             <div class="note-card">
-                <a href="/delete/{{ note.id }}" class="delete-btn">Delete</a>
+                <form action="/delete/{{ note.id }}" method="post" class="delete-form">
+                    <button type="submit" class="delete-btn">Delete</button>
+                </form>
                 <h3>{{ note.title }}</h3>
                 <p>{{ note.content }}</p>
             </div>

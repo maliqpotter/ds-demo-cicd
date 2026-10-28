@@ -2,44 +2,71 @@ name: CD - Build, Push and Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+
+env:
+  PYTHON_VERSION: '3.11'
+  # Non-sensitive config can live in GitHub Variables (vars.*)
+  IMAGE_NAME: ${{ vars.IMAGE_NAME || 'notes-app' }}
+  DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '80' }}
+  DEPLOY_DIR: ${{ vars.DEPLOY_DIR || '~/notes-app' }}
 
 jobs:
   build-and-push:
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
+
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/notes-app:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
+    name: Deploy to Server
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to Server via SSH
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Copy docker-compose.yml to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "${{ env.DEPLOY_DIR }}/"
+
+      - name: Deploy with docker-compose
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # Pull the latest image
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/notes-app:latest
-            
-            # Stop and remove existing container if it exists
-            docker stop notes-app || true
-            docker rm notes-app || true
-            
-            # Run the new container
-            docker run -d --name notes-app -p 80:8000 ${{ secrets.DOCKERHUB_USERNAME }}/notes-app:latest
+            mkdir -p ${{ env.DEPLOY_DIR }}
+            cd ${{ env.DEPLOY_DIR }}
+
+            # Use the exact SHA-tagged image that was just pushed
+            export DOCKER_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+            docker compose pull
+            docker compose up -d
+
+            # Post-deploy health check
+            sleep 5
+            curl -f http://localhost:${{ env.DEPLOY_PORT }}/health || exit 1
